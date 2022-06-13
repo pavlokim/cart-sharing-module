@@ -1,4 +1,4 @@
-name: 'cart_sharing'
+name: 'Cart sharing'
 type: module
 description: 'Cart sharing module for test task.'
 core_version_requirement: ^9.2 || ^10
