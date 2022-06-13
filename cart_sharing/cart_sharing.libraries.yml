@@ -1,0 +1,3 @@
+shared_link:
+  dependencies:
+    - core/drupal.dialog.ajax

@@ -1,0 +1,112 @@
+<?php
+
+/**
+ * @file
+ * Contains cart_sharing.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Component\Utility\Tags;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\views\Form\ViewsForm;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\OpenModalDialogCommand;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_help().
+ */
+function cart_sharing_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the cart_sharing module.
+    case 'help.page.cart_sharing':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Cart sharing module for test task.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function cart_sharing_views_data_alter(array &$data) {
+  $data['commerce_product_variation']['add_button']['field'] = [
+    'title' => t('Add button'),
+    'help' => t('Adds a button for adding the product to the cart'),
+    'id' => 'cart_sharing_add_button',
+  ];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function cart_sharing_theme($existing, $type, $theme, $path) {
+  return [
+    'cart_sharing_share_link_block' => [
+      'variables' => [
+        'content' => [],
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function cart_sharing_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if ($form_state->getFormObject() instanceof ViewsForm) {
+    /** @var \Drupal\views\ViewExecutable $view */
+    $view = reset($form_state->getBuildInfo()['args']);
+    $tags = Tags::explode($view->storage->get('tag'));
+    // Only add the Checkout button if the cart form view has order items.
+    if (in_array('commerce_cart_form', $tags, TRUE) && !empty($view->result)) {
+      $form['#prefix'] = '<div id="cart-sharing-wrapper">';
+      $form['#suffix'] = '</div>';
+      $form['actions']['share'] = [
+        '#type' => 'submit',
+        '#value' => t('Share your cart'),
+        '#weight' => 6,
+        // Make it easy to test.
+        //'#access' => \Drupal::currentUser()->hasPermission('access cart share'),
+        '#ajax' => [
+          'event' => 'click',
+          'callback' => 'cart_sharing_get_link_form_submit',
+          'progress' => [
+            'type' => 'fullscreen',
+          ],
+          'wrapper' => 'cart-sharing-wrapper',
+        ],
+      ];
+    }
+  }
+}
+
+/**
+ * Submit handler used to redirect to the checkout page.
+ */
+function cart_sharing_get_link_form_submit($form, FormStateInterface $form_state) {
+  $response = new AjaxResponse();
+  /** @var \Drupal\cart_sharing\CartShareTokenInterface $token_service */
+  $token_service = \Drupal::service('cart_sharing.token');
+  /** @var \Drupal\commerce_cart\CartProviderInterface $cart_provider */
+  $cart_provider = \Drupal::service('commerce_cart.cart_provider');
+  $view = reset($form_state->getBuildInfo()['args']);
+  $cart_id = $view->argument['order_id']->value[0];
+
+  $url = Url::fromRoute('share.cart.link',
+    [
+      'cart_id' => $cart_id,
+      'token' => $token_service->generate($cart_id),
+    ])->setAbsolute();
+
+  $cart_sharing_link_block = \Drupal::service('plugin.manager.block')->createInstance('cart_sharing_link_block');
+  $cart_sharing_link_block->setContextValue('url', $url);
+  $cart_sharing_link_block_build = $cart_sharing_link_block->build();
+
+  $response->addCommand(new OpenModalDialogCommand(t('Link to share a list of products from your cart.'), $cart_sharing_link_block_build, ['width' => '700']));
+  return $response;
+
+}

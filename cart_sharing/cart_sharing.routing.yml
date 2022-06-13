@@ -1,0 +1,14 @@
+share.cart.link:
+  path: '/share/{cart_id}/{token}'
+  defaults:
+    _controller: '\Drupal\cart_sharing\Controller\CartShareLinkController::getSharedCartPage'
+  requirements:
+    _user_is_logged_in: 'TRUE'
+    _permission: 'view commerce_product'
+    _custom_access:  '\Drupal\cart_sharing\Controller\CartShareLinkController::access'
+share.cart.add_to_cart_link:
+  path: '/add-cart/{product_variation_id}'
+  defaults:
+    _controller: '\Drupal\cart_sharing\Controller\CartShareAddToCartController::addToCart'
+  requirements:
+    _csrf_token: 'TRUE'

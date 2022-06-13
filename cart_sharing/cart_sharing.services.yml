@@ -1,0 +1,4 @@
+services:
+  cart_sharing.token:
+    class: Drupal\cart_sharing\CartShareToken
+    arguments: ['@current_user', '@private_key']

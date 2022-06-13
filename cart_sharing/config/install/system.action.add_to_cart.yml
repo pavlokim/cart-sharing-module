@@ -1,0 +1,11 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - commerce_product
+    - cart_sharing
+id: add_to_cart
+label: 'Add to cart'
+type: commerce_product_variation
+plugin: add_to_cart
+configuration: {  }
